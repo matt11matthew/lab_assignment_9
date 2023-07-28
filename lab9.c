@@ -210,7 +210,9 @@ int main(void)
 	int recordSz = 0;
 
 //	recordSz = parseData("input.txt", &pRecords);
-	recordSz = parseData("C:\\Users\\Matthew Eisenberg\\Documents\\DREnhancedMod\\Projects\\DRMod\\lab_assignment_9\\input.txt", &pRecords);
+	recordSz = parseData("C:\\Users\\matt1\\CLionProjects\\lab_assignment_9\\input.txt", &pRecords);
+//	recordSz = parseData("C:\\Users\\Matthew Eisenberg\\Documents\\DREnhancedMod\\Projects\\DRMod\\lab_assignment_9\\input.txt", &pRecords);
+//	recordSz = parseData("C:\\Users\\Matthew Eisenberg\\Documents\\DREnhancedMod\\Projects\\DRMod\\lab_assignment_9\\input.txt", &pRecords);
 	printRecords(pRecords, recordSz);
 
     struct HashType* hash_table = create_hash_table(recordSz);
