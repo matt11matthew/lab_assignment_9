@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <malloc.h>
+#include <string.h>
 
 // RecordType
 struct RecordType
@@ -22,94 +23,88 @@ struct HashType
     struct Node** table; // Pointer to the array of linked lists (the hash table itself)
 };
 
-int next_prime(int num) {
-    int prime_candidate = num;
-    int is_prime = 0;
-
-    while (!is_prime) {
-        prime_candidate++;
-        is_prime = 1;
-
-        for (int i = 2; i * i <= prime_candidate; i++) {
-            if (prime_candidate % i == 0) {
-                is_prime = 0;
-                break;
-            }
-        }
-    }
-
-    return prime_candidate;
-}
 // Function to initialize the HashType structure
 struct HashType* create_hash_table(int size)
 {
-    int prime_size = next_prime(size);
+//    int prime_size = next_prime(size);
     struct HashType* hash_table = (struct HashType*)malloc(sizeof(struct HashType));
-    hash_table->size = prime_size;
-    hash_table->table = (struct Node**)calloc(prime_size, sizeof(struct Node*));
+    hash_table->size = 15;
+    hash_table->table = (struct Node**)calloc(15, sizeof(struct Node*));
     return hash_table;
 }
 
-// Compute the hash function
-int hash1(int x, int table_size)
+int sizeOfNode(struct Node *pNode);
+int hashFunction(struct HashType* mp, int key)
 {
-    int hash_value = abs(x) % table_size;
+    const double A = 0.6180339887;
+    double scaledKey = key * A;
+    scaledKey -= (int)scaledKey;
+
+    int bucketIndex = (int)(mp->size * scaledKey);
+
+    return bucketIndex;
+}
+//int hashFunction(struct HashType* mp, int key)
+//{
+//    int bucketIndex;
+//    int sum = 0, factor = 15;
+//    for (int i = 0; i <  key; i++) {
+//        sum = ((sum % mp->size)
+//               + (((int)key) * factor) % mp->size)
+//              % mp->size;
+//
+//        factor = ((factor % __INT16_MAX__)
+//                  * (31 % __INT16_MAX__))
+//                 % __INT16_MAX__;
+//    }
+//
+//    bucketIndex = sum;
+//    if (bucketIndex>14)bucketIndex=14;
+//    return bucketIndex;
+//}
+
+
+// Compute the hash function
+int hash(int x, int table_size)
+{
+    int hash_value = x % table_size;
     return hash_value;
 }
+// Function to insert a record into the hash table with linear probing to find the next available bucket
 
-// Function to find the greatest common divisor (GCD) using Euclid's algorithm
-int gcd(int a, int b)
+
+// Function to insert a record into the hash table with a maximum of 2 records per table (bucket)
+void insert(struct HashType* mp, struct RecordType record)
 {
-    if (b == 0)
-        return a;
-    return gcd(b, a % b);
-}
+    int bucketIndex = hashFunction(mp, record.id);
 
-// Second hash function for quadratic probing
-int hash2(int x, int table_size)
-{
-    // Choose a fixed prime number smaller than the table size
-    const int fixed_prime = 31;
-
-    // Find a step size that is a relative prime to the table size using Euclid's algorithm
-    int step = fixed_prime % table_size;
-    while (gcd(step, table_size) != 1)
-    {
-        step++;
-    }
-
-    return step;
-}
-
-void insert(struct HashType* hash_table, struct RecordType record)
-{
-    int index = hash1(record.id, hash_table->size);
-    int step = hash2(record.id, hash_table->size);
-
-    // Find an empty slot using quadratic probing
-    int count = 0;
-    while (hash_table->table[index] != NULL)
-    {
-        // If the current slot has a record with the same key, update its values and return
-        if (hash_table->table[index]->record.id == record.id)
-        {
-            hash_table->table[index]->record = record;
-            return;
-        }
-
-        // Quadratic probing: increment the index in a quadratic manner
-        index = (index + count * step) % hash_table->size;
-
-        // Increment the count to move to the next quadratic offset
-        count++;
-    }
-
-    // If the slot is empty, create a new node and insert the record
     struct Node* new_node = (struct Node*)malloc(sizeof(struct Node));
     new_node->record = record;
     new_node->next = NULL;
-    hash_table->table[index] = new_node;
+
+    // Bucket index is empty....no collision
+    if (mp->table[bucketIndex] == NULL) {
+        mp->table[bucketIndex] = new_node;
+    }
+
+        // Bucket index already has records, check if there are less than 2 records in the chain
+    else {
+        // Find the last node in the chain
+        struct Node* current = mp->table[bucketIndex];
+        int recordCount = 1; // We already have one record in the chain
+
+        while (current->next != NULL) {
+            current = current->next;
+            recordCount++;
+        }
+
+        current->next = new_node;
+
+    }
 }
+
+
+
 
 int parseData(char* inputFileName, struct RecordType** ppData)
 {
@@ -167,8 +162,9 @@ void displayRecordsInHash(struct HashType *pHashArray, int hashSz)
 {
 	int i;
 
-	for (i=0;i<hashSz;++i)
+	for (i=0;i<15;++i) // FIXED BROKEN FUNCTION
 	{
+//        if (pHashArray!=NULL && pHashArray->table[i]!=NULL) {}
         struct Node* current = pHashArray->table[i];
         if (current != NULL)
         {
@@ -183,7 +179,6 @@ void displayRecordsInHash(struct HashType *pHashArray, int hashSz)
 	}
     printf("\n");
 }
-
 void destroy_hash_table(struct HashType* hash_table)
 {
     if (hash_table == NULL)
@@ -196,13 +191,14 @@ void destroy_hash_table(struct HashType* hash_table)
         {
             struct Node* temp = current;
             current = current->next;
-            free(temp);
+            free(temp); // Free each node in the linked list
         }
     }
 
-    free(hash_table->table);
-    free(hash_table);
+    free(hash_table->table); // Free the array of linked lists (the hash table)
+    free(hash_table); // Free the HashType structure itself
 }
+
 
 int main(void)
 {
