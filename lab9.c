@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <malloc.h>
 
 // RecordType
 struct RecordType
@@ -8,16 +9,28 @@ struct RecordType
 	int		order; 
 };
 
-// Fill out this structure
+struct Node
+{
+    struct RecordType record;
+    struct Node* next;
+};
+
+// HashType structure using a hash table with chaining (linked lists)
 struct HashType
 {
-
+    int size;         // Size of the hash table
+    struct Node** table; // Pointer to the array of linked lists (the hash table itself)
 };
 
 // Compute the hash function
-int hash(int x)
+int hash(int x, int table_size)
 {
+    // Ensure the hash value is non-negative by taking the absolute value of the modulo result.
+    // Modulo (%) returns the remainder when x is divided by table_size.
+    // This maps x to an index in the range [0, table_size - 1].
+    int hash_value = abs(x) % table_size;
 
+    return hash_value;
 }
 
 // parses input file to an integer array
