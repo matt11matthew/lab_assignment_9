@@ -22,18 +22,95 @@ struct HashType
     struct Node** table; // Pointer to the array of linked lists (the hash table itself)
 };
 
-// Compute the hash function
-int hash(int x, int table_size)
-{
-    // Ensure the hash value is non-negative by taking the absolute value of the modulo result.
-    // Modulo (%) returns the remainder when x is divided by table_size.
-    // This maps x to an index in the range [0, table_size - 1].
-    int hash_value = abs(x) % table_size;
+int next_prime(int num) {
+    int prime_candidate = num;
+    int is_prime = 0;
 
+    while (!is_prime) {
+        prime_candidate++;
+        is_prime = 1;
+
+        for (int i = 2; i * i <= prime_candidate; i++) {
+            if (prime_candidate % i == 0) {
+                is_prime = 0;
+                break;
+            }
+        }
+    }
+
+    return prime_candidate;
+}
+// Function to initialize the HashType structure
+struct HashType* create_hash_table(int size)
+{
+    int prime_size = next_prime(size);
+    struct HashType* hash_table = (struct HashType*)malloc(sizeof(struct HashType));
+    hash_table->size = prime_size;
+    hash_table->table = (struct Node**)calloc(prime_size, sizeof(struct Node*));
+    return hash_table;
+}
+
+// Compute the hash function
+int hash1(int x, int table_size)
+{
+    int hash_value = abs(x) % table_size;
     return hash_value;
 }
 
-// parses input file to an integer array
+// Function to find the greatest common divisor (GCD) using Euclid's algorithm
+int gcd(int a, int b)
+{
+    if (b == 0)
+        return a;
+    return gcd(b, a % b);
+}
+
+// Second hash function for quadratic probing
+int hash2(int x, int table_size)
+{
+    // Choose a fixed prime number smaller than the table size
+    const int fixed_prime = 31;
+
+    // Find a step size that is a relative prime to the table size using Euclid's algorithm
+    int step = fixed_prime % table_size;
+    while (gcd(step, table_size) != 1)
+    {
+        step++;
+    }
+
+    return step;
+}
+
+void insert(struct HashType* hash_table, struct RecordType record)
+{
+    int index = hash1(record.id, hash_table->size);
+    int step = hash2(record.id, hash_table->size);
+
+    // Find an empty slot using quadratic probing
+    int count = 0;
+    while (hash_table->table[index] != NULL)
+    {
+        // If the current slot has a record with the same key, update its values and return
+        if (hash_table->table[index]->record.id == record.id)
+        {
+            hash_table->table[index]->record = record;
+            return;
+        }
+
+        // Quadratic probing: increment the index in a quadratic manner
+        index = (index + count * step) % hash_table->size;
+
+        // Increment the count to move to the next quadratic offset
+        count++;
+    }
+
+    // If the slot is empty, create a new node and insert the record
+    struct Node* new_node = (struct Node*)malloc(sizeof(struct Node));
+    new_node->record = record;
+    new_node->next = NULL;
+    hash_table->table[index] = new_node;
+}
+
 int parseData(char* inputFileName, struct RecordType** ppData)
 {
 	FILE* inFile = fopen(inputFileName, "r");
@@ -92,8 +169,39 @@ void displayRecordsInHash(struct HashType *pHashArray, int hashSz)
 
 	for (i=0;i<hashSz;++i)
 	{
-		// if index is occupied with any records, print all
+        struct Node* current = pHashArray->table[i];
+        if (current != NULL)
+        {
+            printf("Index %d -> ", i);
+            while (current != NULL)
+            {
+                printf("%d %c %d -> ", current->record.id, current->record.name, current->record.order);
+                current = current->next;
+            }
+            printf("NULL\n");
+        }
 	}
+    printf("\n");
+}
+
+void destroy_hash_table(struct HashType* hash_table)
+{
+    if (hash_table == NULL)
+        return;
+
+    for (int i = 0; i < hash_table->size; i++)
+    {
+        struct Node* current = hash_table->table[i];
+        while (current != NULL)
+        {
+            struct Node* temp = current;
+            current = current->next;
+            free(temp);
+        }
+    }
+
+    free(hash_table->table);
+    free(hash_table);
 }
 
 int main(void)
@@ -101,7 +209,23 @@ int main(void)
 	struct RecordType *pRecords;
 	int recordSz = 0;
 
-	recordSz = parseData("input.txt", &pRecords);
+//	recordSz = parseData("input.txt", &pRecords);
+	recordSz = parseData("C:\\Users\\Matthew Eisenberg\\Documents\\DREnhancedMod\\Projects\\DRMod\\lab_assignment_9\\input.txt", &pRecords);
 	printRecords(pRecords, recordSz);
+
+    struct HashType* hash_table = create_hash_table(recordSz);
+
+    // Insert the records into the hash table
+    for (int i = 0; i < recordSz; i++)
+    {
+        insert(hash_table, pRecords[i]);
+    }
+
+    // Display the records stored in the hash table
+    displayRecordsInHash(hash_table, recordSz);
+
+    // Clean up and free memory
+    destroy_hash_table(hash_table);
+    free(pRecords);
 	// Your hash implementation
 }
